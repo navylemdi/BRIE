@@ -266,7 +266,16 @@ class Bearing():
     
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
-
+    
+    def sagittas(self, part):
+        return part.r + part.ds/2 - self.Ri
+    
+    def arc_cord(self, part):
+        return 2*np.sqrt( part.r**2 - (-part.r + self.sagittas(part))**2 )
+    
+    def arc_opening_angle(self, part):
+        return np.degrees( 2*np.arcsin(self.arc_cord(part)/(2*part.r)) )
+    
     def Display(self):
         fig = plt.figure()
         ax1 = plt.subplot(2,1,1)
@@ -286,19 +295,32 @@ class Bearing():
                               Line2D([0], [0], color='r', lw=2, label='Outer ring')])
         
         ax2 = plt.subplot(2,1,2)
-        
+        lw=0.00001
         # Ball Drawing
         c=Circle((0, self.dm/2), self.ball.D/2, color='k')
         ax2.add_patch(c)
 
         # Inner ring drawing
-        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), self.inner.b, self.inner.b/50, color='b'))
-        ax2.add_patch(Arc((0, self.Ri), self.inner.r+10/1000, self.inner.r+10/1000, color='b', theta1=-90, theta2=0))
+        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), self.inner.b, lw, color='b'))
+        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
+        ax2.add_patch(Rectangle((self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
+        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.ds/2 ), self.inner.b/2 - self.arc_cord(self.inner)/2, lw, color='b'))
+        ax2.add_patch(Rectangle((self.arc_cord(self.inner)/2, self.inner.ds/2 ), self.inner.b/2 - self.arc_cord(self.inner)/2, lw, color='b'))
 
+        # print('radius', self.inner.r, 'diameter', 2 *self.inner.r)
+        # print('angle', self.arc_opening_angle(self.inner)/2)
+        # print('arc_coord', self.arc_cord(self.inner))
+        # print('sagittas', self.sagittas(self.inner))
+        # print('theta1', (3/2*180 - self.arc_opening_angle(self.inner)/2))
+        # print('theta2', 1/2 * (180-self.arc_opening_angle(self.inner)/2))
+        ax2.add_patch(Arc((0, self.Ri), 2*self.inner.r, 2*self.inner.r, color='b', theta1=(3/2*180 - self.arc_opening_angle(self.inner)/2), theta2=1/2 * (3*180+self.arc_opening_angle(self.inner)), linewidth=2))
+        ax2.plot(0, self.Ri, marker='+')        
+        
         # Outer ring drawing
-        ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d/2 ), self.outer.b, self.outer.b/50, color='r'))
-        ax2.add_patch(Arc((0, self.Ro), self.outer.r, self.outer.r, color='r', theta1=90, theta2=180))
-
+        ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d/2 ), self.outer.b, lw, color='r'))
+        
+        ax2.add_patch(Arc((0, self.Ro), self.ball.D, self.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
+        ax2.plot(0, self.Ro, marker='+')
 
         ax2.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
                               Line2D([0], [0], color='b', lw=2, label='Inner ring'),
