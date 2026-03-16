@@ -1,0 +1,63 @@
+---
+AISI 440C (M&I):  
+  E: 208000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.28 
+  CTE: 0.0000103 #[m/m/K]
+  HRC_min: 60
+  HRC_max: 63
+  T_lim: 150 #[°C]
+
+AISI 440C (S&T):  
+  E: 208000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.28 
+  CTE: 0.0000103 #[m/m/K]
+  HRC_min: 56
+  HRC_max: 60
+  T_lim: 315 #[°C]
+
+Ceramic:  
+  E: 315000 #[MPa]
+  Rho: 3200 #[kg/m3]
+  Nu: 0.26 
+  CTE: 0.0000031 #[m/m/K]
+  HRC_min: 78
+  HRC_max: 78
+  T_lim: 1096 #[°C]
+
+AMS5898:  
+  E: 218000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.26 
+  CTE: 0.0000103 #[m/m/K]
+  HRC_min: 58
+  HRC_max: 60
+  T_lim: 480 #[°C]
+
+AISI M50:  
+  E: 208000 #[MPa]
+  Rho: 8000 #[kg/m3]
+  Nu: 0.29 
+  CTE: 0.0000119 #[m/m/K]
+  HRC_min: 61
+  HRC_max: 64
+  T_lim: 345 #[°C]
+
+SAE 52100 (M&I):
+  E: 208000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.29 
+  CTE: 0.000012 #[m/m/K]
+  HRC_min: 62
+  HRC_max: 65
+  T_lim: 177 #[°C]
+
+SAE 52100 (S&T):
+  E: 208000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.29 
+  CTE: 0.000012 #[m/m/K]
+  HRC_min: 58.5
+  HRC_max: 65
+  T_lim: 200 #[°C]
