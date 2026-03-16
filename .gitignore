@@ -3,6 +3,13 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Test pictures
+200_resol.png
+
+# Test codes
+Hertz.py
+Test.py
+
 # C extensions
 *.so
 
@@ -206,10 +213,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-# Test pictures
-200_resol.png
-
-# Test codes
-Hertz.py
-Test.py
