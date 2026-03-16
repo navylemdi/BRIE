@@ -1,10 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[codz]
-*$py.class
 
 # Test pictures
-200_resol.png
+./200_resol.png
+*.png
 
 # Test codes
 Hertz.py
