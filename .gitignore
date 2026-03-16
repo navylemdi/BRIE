@@ -49,6 +49,7 @@ coverage.xml
 *.py.cover
 .hypothesis/
 .pytest_cache/
+.__pycache__/
 cover/
 
 # Translations
@@ -205,3 +206,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Test pictures
+200_resol.png
+
+# Test codes
+Hertz.py
+Test.py
