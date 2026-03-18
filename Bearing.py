@@ -325,6 +325,26 @@ class Bearing():
  
         return b
     
+    def Q(self, DeltaAbar, DeltaRbar, Thetabar, psi):
+        return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + DeltaAbar + self.Ri*Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar*np.cos(psi))**2)**0.5 -1)**1.5
+    
+    def alpha(self, DeltaAbar, DeltaRbar, Thetabar, psi):
+        return (np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi)) / ((np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))**2)**0.5
+    
+    def alpha2(self, DeltaAbar, DeltaRbar, Thetabar, psi):
+        return (np.cos(self.alpha0) + DeltaRbar*np.cos(psi)) / ((np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))**2)**0.5
+    
+    def alpha3(self, DeltaAbar, DeltaRbar, Thetabar, psi):
+        return (np.sin(self.alpha0) + DeltaAbar+ self.Ri*Thetabar*np.cos(psi)) / (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))
+
+    def Display_ball_load(self, Fa, Fr, M):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        disp = self.solve_disp(Fa, Fr, M)
+        Q=[]
+        psi=np.linspace(-np.pi, np.pi, self.Z+1)
+        for angle in psi:
+            Q.append(self.Q(disp[0], disp[1], disp[2], angle))
+        ax.plot(psi, Q)
 
     def Display(self):
         def sagittas(part):
@@ -385,4 +405,3 @@ class Bearing():
                               Line2D([0], [0], color='b', lw=2, label='Inner ring'),
                               Line2D([0], [0], color='r', lw=2, label='Outer ring')])
         ax2.axis('equal')
-        plt.show()
