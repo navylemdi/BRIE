@@ -33,9 +33,21 @@ class Bearing():
         self.fo=self.conformity(self.outer)
         self.B = self.fi+self.fo-1
         self.A=A
+        self.gamma = self.gamma()
+        print('gamma', self.gamma)
+        self.Rx_i = self.Rx(self.inner)
+        print('Rx_i', self.Rx_i)
+        self.Rx_e = self.Rx(self.outer)
+        self.Ry_i = self.Ry(self.inner)
+        self.Ry_e = self.Ry(self.outer)
+        self.R_i = 1/self.inverse_R(self.Rx_i, self.Ry_i)
+        self.R_e = 1/self.inverse_R(self.Rx_e, self.Ry_e)
+        self.GAMMA_i = self.GAMMA(self.Rx_i, self.Ry_i)
+        self.GAMMA_e = self.GAMMA(self.Rx_e, self.Ry_e)
+
+        self.Kn = self.Kn()
         self.Ri=self.Ri()
         self.Ro=self.Ro()
-        self.Kn = self.Kn()
 
     def conformity(self, ring: Raceway):
         """Bearing conformity computation
@@ -77,6 +89,23 @@ class Bearing():
         psi = np.radians(psi)
         return self.A * ( np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2) - 1)
     
+    def gamma(self):
+        return self.ball.D * np.cos(self.alpha0)/self.dm
+    
+    def Rx(self, part):
+        if part.type =='Inner':
+            Rx = (1-self.gamma) * self.ball.D/2
+        elif part.type == 'Outer':
+            Rx = (1+self.gamma) * self.ball.D/2
+        return Rx
+    
+    def Ry(self, part):
+        if part.type =='Inner':
+            Ry = self.fi*self.ball.D/(2*self.fi -1)
+        elif part.type == 'Outer':
+            Ry = self.fo*self.ball.D/(2*self.fo -1)
+        return Ry
+    
     def GAMMA(self, Rx, Ry):
         """Curvature difference computation according to GUAY
 
@@ -89,7 +118,7 @@ class Bearing():
         """
         return (1/Rx-1/Ry)/(1/Rx+1/Ry)
     
-    def inverse_R(self,Rx, Ry):
+    def inverse_R(self, Rx, Ry):
         return 1/Rx + 1/Ry
     
     def F(self, k):
@@ -146,11 +175,11 @@ class Bearing():
         Returns:
             float: ki and ke
         """
-        gamma = self.ball.D * np.cos(self.alpha0)/self.dm
-        Rxi = (1-gamma)*self.ball.D/2
-        Ryi = self.fi * self.ball.D/(2*self.fi-1)
-        Rxe = (1+gamma)*self.ball.D/2
-        Rye = self.fo * self.ball.D/(2*self.fo-1)
+        gamma = self.gamma
+        Rxi = self.Rx_i
+        Ryi = self.Ry_i
+        Rxe = self.Rx_e
+        Rye = self.Ry_e
         # k_approx_i = (Ryi/Rxi)**(2/np.pi)
         # k_approx_e = (Rye/Rxe)**(2/np.pi)
         k_approx_i = 1.18*(Ryi/Rxi)**(0.598) - 0.19
@@ -162,11 +191,11 @@ class Bearing():
     def F_approx(self):
         """Approximation of F(k)
         """
-        gamma = self.ball.D * np.cos(self.alpha0)/self.dm
-        Rxi = (1-gamma)*self.ball.D/2
-        Ryi = self.fi * self.ball.D/(2*self.fi-1)
-        Rxe = (1+gamma)*self.ball.D/2
-        Rye = self.fo * self.ball.D/(2*self.fo-1)
+        gamma = self.gamma
+        Rxi = self.Rx_i
+        Ryi = self.Ry_i
+        Rxe = self.Rx_e
+        Rye = self.Ry_e
         F_ki_approx=np.pi/2 + (np.pi/2-1) * np.log(Ryi/Rxi)
         F_ke_approx=np.pi/2 + (np.pi/2-1) * np.log(Rye/Rxe)
         print('F(ki) approximated', F_ki_approx)
@@ -175,11 +204,11 @@ class Bearing():
     def S_approx(self):
         """Approximation of S(k)
         """
-        gamma = self.ball.D * np.cos(self.alpha0)/self.dm
-        Rxi = (1-gamma)*self.ball.D/2
-        Ryi = self.fi * self.ball.D/(2*self.fi-1)
-        Rxe = (1+gamma)*self.ball.D/2
-        Rye = self.fo * self.ball.D/(2*self.fo-1)
+        gamma = self.gamma
+        Rxi = self.Rx_i
+        Ryi = self.Ry_i
+        Rxe = self.Rx_e
+        Rye = self.Ry_e
         S_ki_approx=1 + (np.pi/2-1) / (Ryi/Rxi)
         S_ke_approx=1 + (np.pi/2-1) / (Rye/Rxe)
         print('S(ki) approximated', S_ki_approx)
@@ -191,15 +220,15 @@ class Bearing():
         Returns:
             float: Ball stiffness
         """
-        gamma = self.ball.D * np.cos(self.alpha0)/self.dm
-        Rxi = (1-gamma)*self.ball.D/2
-        Ryi = self.fi * self.ball.D/(2*self.fi-1)
-        Rxe = (1+gamma)*self.ball.D/2
-        Rye = self.fo * self.ball.D/(2*self.fo-1)
-        inverse_Ri = self.inverse_R(Rxi,Ryi)
-        inverse_Re = 1/Rxe+1/Rye
-        GAMMAi = self.GAMMA(Rxi, Ryi)
-        GAMMAe = self.GAMMA(Rxe, Rye)
+        gamma = self.gamma
+        Rxi = self.Rx_i
+        Ryi = self.Ry_i
+        Rxe = self.Rx_e
+        Rye = self.Ry_e
+        inverse_Ri = 1/self.R_i
+        inverse_Re = 1/self.R_e
+        GAMMAi = self.GAMMA_i
+        GAMMAe = self.GAMMA_e
         # print('GAMMAi', GAMMAi)
         # print('GAMMAe', GAMMAe)
         k_res_i = self.solve_k(GAMMAi)
@@ -267,16 +296,46 @@ class Bearing():
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
     
-    def sagittas(self, part):
-        return part.r + part.ds/2 - self.Ri
+    def a(self, Q, part):
+        if part.type=='Inner':
+            Rx = self.Rx_i
+            Ry = self.Ry_i
+            R = 1/self.R_i
+            kappa = self.solve_k(self.GAMMA_i)
+            Sk = self.S(kappa)
+
+        elif part.type=='Outer':
+            Rx = self.Rx_e
+            Ry = self.Ry_e
+            R = 1/self.R_e
+            kappa = self.solve_k(self.GAMMA_e)
+            Sk = self.S(kappa)
+        
+        a = (6*kappa**2 * Sk * Q * R/(np.pi*self.equiv_E(self.ball, part)))**1/3
+        return a
     
-    def arc_cord(self, part):
-        return 2*np.sqrt( part.r**2 - (-part.r + self.sagittas(part))**2 )
+    def b(self, a, part):
+        if part.type=='Inner':
+            kappa = self.solve_k(self.GAMMA_i)
+
+        elif part.type=='Outer':
+            kappa = self.solve_k(self.GAMMA_e)
+        
+        b = a/kappa
+ 
+        return b
     
-    def arc_opening_angle(self, part):
-        return np.degrees( 2*np.arcsin(self.arc_cord(part)/(2*part.r)) )
-    
+
     def Display(self):
+        def sagittas(part):
+            return part.r + part.ds/2 - self.Ri
+    
+        def arc_cord(part):
+            return 2*np.sqrt( part.r**2 - (-part.r + sagittas(part))**2 )
+    
+        def arc_opening_angle(part):
+            return np.degrees( 2*np.arcsin(arc_cord(part)/(2*part.r)) )
+        
         fig = plt.figure()
         ax1 = plt.subplot(2,1,1)
         # Ball Drawing
@@ -304,16 +363,16 @@ class Bearing():
         ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), self.inner.b, lw, color='b'))
         ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
         ax2.add_patch(Rectangle((self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
-        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.ds/2 ), self.inner.b/2 - self.arc_cord(self.inner)/2, lw, color='b'))
-        ax2.add_patch(Rectangle((self.arc_cord(self.inner)/2, self.inner.ds/2 ), self.inner.b/2 - self.arc_cord(self.inner)/2, lw, color='b'))
+        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
+        ax2.add_patch(Rectangle((arc_cord(self.inner)/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
 
         # print('radius', self.inner.r, 'diameter', 2 *self.inner.r)
-        # print('angle', self.arc_opening_angle(self.inner)/2)
-        # print('arc_coord', self.arc_cord(self.inner))
-        # print('sagittas', self.sagittas(self.inner))
-        # print('theta1', (3/2*180 - self.arc_opening_angle(self.inner)/2))
-        # print('theta2', 1/2 * (180-self.arc_opening_angle(self.inner)/2))
-        ax2.add_patch(Arc((0, self.Ri), 2*self.inner.r, 2*self.inner.r, color='b', theta1=(3/2*180 - self.arc_opening_angle(self.inner)/2), theta2=1/2 * (3*180+self.arc_opening_angle(self.inner)), linewidth=2))
+        # print('angle', arc_opening_angle(self.inner)/2)
+        # print('arc_coord', arc_cord(self.inner))
+        # print('sagittas', sagittas(self.inner))
+        # print('theta1', (3/2*180 - arc_opening_angle(self.inner)/2))
+        # print('theta2', 1/2 * (180-arc_opening_angle(self.inner)/2))
+        ax2.add_patch(Arc((0, self.Ri), 2*self.inner.r, 2*self.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(self.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(self.inner)), linewidth=2))
         ax2.plot(0, self.Ri, marker='+')        
         
         # Outer ring drawing
