@@ -61,3 +61,12 @@ SAE 52100 (S&T):
   HRC_min: 58.5
   HRC_max: 65
   T_lim: 200 #[°C]
+
+Steel:
+  E: 228000 #[MPa]
+  Rho: 7800 #[kg/m3]
+  Nu: 0.29 
+  CTE: 0.000012 #[m/m/K]
+  HRC_min: 58.5
+  HRC_max: 65
+  T_lim: 200 #[°C]
