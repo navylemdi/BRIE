@@ -31,23 +31,27 @@ class Bearing():
         self.dm=dm
         self.fi=self.conformity(self.inner)
         self.fo=self.conformity(self.outer)
+        # print('RBx', (self.dm-self.ball.D*np.cos(alpha0))/(2*np.cos(self.alpha0)))
         self.B = self.fi+self.fo-1
         self.A=A
         self.gamma = self.gamma()
         print('gamma', self.gamma)
         self.Rx_i = self.Rx(self.inner)
-        print('Rx_i', self.Rx_i)
         self.Rx_e = self.Rx(self.outer)
         self.Ry_i = self.Ry(self.inner)
         self.Ry_e = self.Ry(self.outer)
+        print(self.Rx_i)
+        print(self.Rx_e)
+        print(self.Ry_i)
+        print(self.Ry_e)
         self.R_i = 1/self.inverse_R(self.Rx_i, self.Ry_i)
         self.R_e = 1/self.inverse_R(self.Rx_e, self.Ry_e)
         self.GAMMA_i = self.GAMMA(self.Rx_i, self.Ry_i)
         self.GAMMA_e = self.GAMMA(self.Rx_e, self.Ry_e)
 
         self.Kn = self.Kn()
-        self.Ri=self.Ri()
-        self.Ro=self.Ro()
+        self.Ri = self.Ri()
+        self.Ro = self.Ro()
 
     def conformity(self, ring: Raceway):
         """Bearing conformity computation
@@ -93,6 +97,7 @@ class Bearing():
         return self.ball.D * np.cos(self.alpha0)/self.dm
     
     def Rx(self, part):
+        #Verified
         if part.type =='Inner':
             Rx = (1-self.gamma) * self.ball.D/2
         elif part.type == 'Outer':
@@ -100,6 +105,7 @@ class Bearing():
         return Rx
     
     def Ry(self, part):
+        #Verified
         if part.type =='Inner':
             Ry = self.fi*self.ball.D/(2*self.fi -1)
         elif part.type == 'Outer':
@@ -107,22 +113,26 @@ class Bearing():
         return Ry
     
     def GAMMA(self, Rx, Ry):
-        """Curvature difference computation according to GUAY
+        """Curvature difference computation
+        Verified
 
         Args:
-            Rx (float): X curvature radius (ball rolling direction)
-            Ry (float): Y curvature radius (shaft axis)
+            Rx (float): X curvature radius (shaft axis)
+            Ry (float): Y curvature radius (ball rolling direction)
 
         Returns:
-            float: _description_
+            float: Major gamma function ie curvature difference
         """
-        return (1/Rx-1/Ry)/(1/Rx+1/Ry)
+        return (1/self.inverse_R(Rx, Ry)) * ( 1/Rx - 1/Ry)
     
     def inverse_R(self, Rx, Ry):
+        #Verified
         return 1/Rx + 1/Ry
     
     def F(self, k):
+        
         """F(k) function. Elliptic integral of first kind
+        Verified
 
         Args:
             k (float): Ellipse elongation
@@ -136,6 +146,7 @@ class Bearing():
 
     def S(self, k):
         """S(k) function. Elliptic integral of first kind
+        Verified
 
         Args:
             k (float): Ellipse elongation
@@ -147,70 +158,89 @@ class Bearing():
         res, abs = integrate.quad(integrand, 0, np.pi/2, limit=200)
         return res
     
-    def H1(self, k,GAMMA):
+    def H1(self, k, GAMMA):
         """Function to solve for k 
-
+        Verified
         Args:
             k (float): Ellipse elongation
             GAMMA (float): Curvature difference [1/m]
 
         Returns:
             float: Gap with zero
-        """
-        return 1 - 2/(k**2-1) * ((self.F(k)/self.S(k))-1) - GAMMA
+        """                
+        return 1 - 2/(k**2-1) * ((self.F(k)/self.S(k))-1) - GAMMA #np.sqrt((2*self.F(k)-self.S(k)*(1+GAMMA))/(self.S(k)*(1-GAMMA)))-k#
     
-    def solve_k(self, GAMMA):            
-            # res=fsolve(func, [1])
-            res = root_scalar(
-                    self.H1,
-                    args=(GAMMA),
-                    bracket=[1e-3, 1e3],   # intervalle large
-                    method='brentq'
-                ).root
-            return res
+    def solve_k(self, GAMMA):
+        """Résout H1(k, GAMMA) = 0 pour k avec fsolve.
+        Verified
+        """
+        try:
+            res, infodict, ier, mesg = fsolve(
+                self.H1,
+                x0=2,  # Valeur initiale
+                args=(GAMMA,),
+                full_output=True
+            )
+            if ier == 1:  # Succès
+                # print(f"Solution pour k: {res[0]}")
+                return res[0]
+            else:
+                print(f"fsolve n'a pas convergé: {mesg}")
+                return None
+        except Exception as e:
+            print(f"Erreur lors de la résolution: {e}")
+            return None
     
     def k_approx(self):
         """Compute the approximation of k according to GUAY
+        Verified
 
         Returns:
             float: ki and ke
         """
-        gamma = self.gamma
         Rxi = self.Rx_i
         Ryi = self.Ry_i
         Rxe = self.Rx_e
         Rye = self.Ry_e
+        rhoi = Ryi/Rxi
+        rhoe = Rye/Rxe
+        print('rhoi', rhoi)
+        print('rhoe', rhoe)
         # k_approx_i = (Ryi/Rxi)**(2/np.pi)
         # k_approx_e = (Rye/Rxe)**(2/np.pi)
-        k_approx_i = 1.18*(Ryi/Rxi)**(0.598) - 0.19
-        k_approx_e = 1.18*(Rye/Rxe)**(0.598) - 0.19
-        print('ki approximated', k_approx_i)
-        print('ke approximated', k_approx_e)
+        k_approx_i = 1.18*(rhoi)**(0.598) - 0.19
+        k_approx_e = 1.18*(rhoe)**(0.598) - 0.19
+        # print('ki approximated', k_approx_i)
+        # print('ke approximated', k_approx_e)
         return k_approx_i, k_approx_e
 
     def F_approx(self):
         """Approximation of F(k)
+        Verified
         """
         gamma = self.gamma
         Rxi = self.Rx_i
         Ryi = self.Ry_i
         Rxe = self.Rx_e
         Rye = self.Ry_e
-        F_ki_approx=np.pi/2 + (np.pi/2-1) * np.log(Ryi/Rxi)
-        F_ke_approx=np.pi/2 + (np.pi/2-1) * np.log(Rye/Rxe)
+        rhoi = Ryi/Rxi
+        rhoe = Rye/Rxe
+        F_ki_approx = np.pi/2 + (np.pi/2-1) * np.log(rhoi)
+        F_ke_approx = np.pi/2 + (np.pi/2-1) * np.log(rhoe)
         print('F(ki) approximated', F_ki_approx)
         print('F(ke) approximated', F_ke_approx)
 
     def S_approx(self):
         """Approximation of S(k)
+        Verified
         """
         gamma = self.gamma
         Rxi = self.Rx_i
         Ryi = self.Ry_i
         Rxe = self.Rx_e
         Rye = self.Ry_e
-        S_ki_approx=1 + (np.pi/2-1) / (Ryi/Rxi)
-        S_ke_approx=1 + (np.pi/2-1) / (Rye/Rxe)
+        S_ki_approx= 1 + (np.pi/2-1) / (Ryi/Rxi)
+        S_ke_approx= 1 + (np.pi/2-1) / (Rye/Rxe)
         print('S(ki) approximated', S_ki_approx)
         print('S(ke) approximated', S_ke_approx)
 
@@ -225,18 +255,16 @@ class Bearing():
         Ryi = self.Ry_i
         Rxe = self.Rx_e
         Rye = self.Ry_e
-        inverse_Ri = 1/self.R_i
-        inverse_Re = 1/self.R_e
         GAMMAi = self.GAMMA_i
         GAMMAe = self.GAMMA_e
         # print('GAMMAi', GAMMAi)
         # print('GAMMAe', GAMMAe)
-        k_res_i = self.solve_k(GAMMAi)
-        k_res_e = self.solve_k(GAMMAe)
+        k_res_i = self.k_approx()[0]#self.solve_k(GAMMAi)
+        k_res_e = self.k_approx()[1]#self.solve_k(GAMMAe)
         # print('Exact ki', k_res_i)
         # print('Exact ke', k_res_e)
-        Ke = np.pi/3 * k_res_e * self.equiv_E(self.ball, self.outer) * np.sqrt(2*self.S(k_res_e) * 1/inverse_Re / self.F(k_res_e)**3)
-        Ki = np.pi/3 * k_res_i * self.equiv_E(self.ball, self.inner) * np.sqrt(2*self.S(k_res_i) * 1/inverse_Ri / self.F(k_res_e)**3)
+        Ke = np.pi/3 * k_res_e * self.equiv_E(self.ball, self.outer) * np.sqrt(2*self.S(k_res_e) * self.R_e / self.F(k_res_e)**3)
+        Ki = np.pi/3 * k_res_i * self.equiv_E(self.ball, self.inner) * np.sqrt(2*self.S(k_res_i) * self.R_i / self.F(k_res_e)**3)
         # print('Exact Ki', Ki)
         # print('Exact Ke', Ke)
         Kn = (1/(Ki**(2/3)) + 1/(Ke**(2/3)))**(-3/2)
@@ -244,7 +272,7 @@ class Bearing():
     
     def equiv_E(self, part1, part2):
         """Equivalent modulus of elasticity
-
+        Verified
         Args:
             part1 (Ball or Raceway): First part
             part2 (Ball or Raceway): Second part
@@ -252,7 +280,7 @@ class Bearing():
         Returns:
             float: Equivalent modulus of elasticity [MPa]
         """
-        return 2/((1-part1.Mat.Nu**2)/part1.Mat.E + (1-part2.Mat.Nu**2)/part2.Mat.E)
+        return 2/( (1-part1.Mat.Nu**2)/part1.Mat.E + (1-part2.Mat.Nu**2)/part2.Mat.E)
 
     def solve_disp(self, Fa, Fr, M):
         """Compute the displacement of inner ring
@@ -273,11 +301,11 @@ class Bearing():
             eq3=M            
             for psi in psi_range:
                 # print(psi)
-                denom = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2))
+                denom = np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2)
                 
-                num1 = (np.sqrt(((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2))-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
-                num2 = (np.sqrt(((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2))-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.cos(psi))*np.cos(psi)
-                num3 = (np.sqrt(((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2))-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
+                num1 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
+                num2 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.cos(psi))*np.cos(psi)
+                num3 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
                 
                 eq1 += - self.Kn*self.A**1.5 * num1/denom
                 eq2 += - self.Kn*self.A**1.5 * num2/denom
@@ -285,7 +313,7 @@ class Bearing():
             
             return [eq1, eq2, eq3]
         
-        x0=[1, 1 , 1]
+        x0=[0, 0 , 0]
         res, infodict, ier, mesg = fsolve(func, x0, full_output=True)
         print('f(xo)', func(x0))
         print('f(res)', func(res))
@@ -296,37 +324,60 @@ class Bearing():
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
     
-    def a(self, Q, part):
-        if part.type=='Inner':
-            Rx = self.Rx_i
-            Ry = self.Ry_i
-            R = 1/self.R_i
-            kappa = self.solve_k(self.GAMMA_i)
-            Sk = self.S(kappa)
+    def a(self, Q, kappa, part):
+        """Compute ellipse axis
+        Verified
+        Args:
+            Q (_type_): _description_
+            kappa (_type_): _description_
+            part (_type_): _description_
 
+        Returns:
+            float: _description_
+        """
+        if part.type=='Inner':
+            R = self.R_i
         elif part.type=='Outer':
-            Rx = self.Rx_e
-            Ry = self.Ry_e
-            R = 1/self.R_e
-            kappa = self.solve_k(self.GAMMA_e)
-            Sk = self.S(kappa)
+            R = self.R_e
         
-        a = (6*kappa**2 * Sk * Q * R/(np.pi*self.equiv_E(self.ball, part)))**1/3
+        Sk = self.S(kappa)
+        E=self.equiv_E(self.ball, part)  
+        # print('R', R)
+        # print('self.S(kappa)', self.S(kappa))
+        # print('kappa', kappa)
+        # print('Q', Q)
+        # print('E', E)   
+        a = (6*kappa**2 * Sk * Q * R/(np.pi*E))**(1/3)
         return a
     
-    def b(self, a, part):
+    def b(self, Q, kappa, part):
+        """Compute ellipse axis
+        Verified
+        Args:
+            Q (_type_): _description_
+            kappa (_type_): _description_
+            part (_type_): _description_
+
+        Returns:
+            float: _description_
+        """
         if part.type=='Inner':
-            kappa = self.solve_k(self.GAMMA_i)
+            R = self.R_i
 
         elif part.type=='Outer':
-            kappa = self.solve_k(self.GAMMA_e)
+            R = self.R_e
         
-        b = a/kappa
- 
+        Sk = self.S(kappa)
+        E=self.equiv_E(self.ball, part)  
+        b = (6*Sk*Q*R/(np.pi*kappa*self.equiv_E(self.ball, part)))**(1/3)
         return b
     
     def Q(self, DeltaAbar, DeltaRbar, Thetabar, psi):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + DeltaAbar + self.Ri*Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar*np.cos(psi))**2)**0.5 -1)**1.5
+    
+    def Pmax(self, Q, a, b):
+        #Verified
+        return 3*Q/(2*np.pi*a*b)
     
     def alpha(self, DeltaAbar, DeltaRbar, Thetabar, psi):
         return (np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi)) / ((np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))**2)**0.5
@@ -335,15 +386,17 @@ class Bearing():
         return (np.cos(self.alpha0) + DeltaRbar*np.cos(psi)) / ((np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))**2)**0.5
     
     def alpha3(self, DeltaAbar, DeltaRbar, Thetabar, psi):
-        return (np.sin(self.alpha0) + DeltaAbar+ self.Ri*Thetabar*np.cos(psi)) / (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))
+        return (np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi)) / (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))
 
     def Display_ball_load(self, Fa, Fr, M):
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         disp = self.solve_disp(Fa, Fr, M)
         Q=[]
-        psi=np.linspace(-np.pi, np.pi, self.Z+1)
+        psi=list(np.linspace(-np.pi, np.pi, self.Z, False))
         for angle in psi:
             Q.append(self.Q(disp[0], disp[1], disp[2], angle))
+        psi.append(psi[0])
+        Q.append(Q[0])
         ax.plot(psi, Q)
 
     def Display(self):
