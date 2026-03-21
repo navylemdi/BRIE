@@ -12,7 +12,7 @@ class Material:
         """
         self.name = name
         self.data = self.load_data()
-        self.E = self.data[name]["E"]
+        self.E = float(self.data[name]["E"])
         self.Rho = self.data[name]["Rho"]
         self.Nu = self.data[name]["Nu"]
         self.CTE = self.data[name]["CTE"]
