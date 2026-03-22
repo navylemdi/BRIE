@@ -35,15 +35,15 @@ class Bearing():
         self.B = self.fi+self.fo-1
         self.A=A
         self.gamma = self.gamma()
-        print('gamma', self.gamma)
+        # print('gamma', self.gamma)
         self.Rx_i = self.Rx(self.inner)
         self.Rx_e = self.Rx(self.outer)
         self.Ry_i = self.Ry(self.inner)
         self.Ry_e = self.Ry(self.outer)
-        print(self.Rx_i)
-        print(self.Rx_e)
-        print(self.Ry_i)
-        print(self.Ry_e)
+        # print(self.Rx_i)
+        # print(self.Rx_e)
+        # print(self.Ry_i)
+        # print(self.Ry_e)
         self.R_i = 1/self.inverse_R(self.Rx_i, self.Ry_i)
         self.R_e = 1/self.inverse_R(self.Rx_e, self.Ry_e)
         self.GAMMA_i = self.GAMMA(self.Rx_i, self.Ry_i)
@@ -65,7 +65,7 @@ class Bearing():
         return ring.r/self.ball.D
     
     def Ri(self):
-        return self.dm/2 + (self.inner.r - self.ball.D/2)*np.cos(self.alpha0)
+        return self.dm/2 + (self.inner.r - self.ball.D/2) * np.cos(self.alpha0)
     
     def Ro(self):
         return self.Ri - self.A*np.cos(self.alpha0)
@@ -204,8 +204,8 @@ class Bearing():
         Rye = self.Ry_e
         rhoi = Ryi/Rxi
         rhoe = Rye/Rxe
-        print('rhoi', rhoi)
-        print('rhoe', rhoe)
+        # print('rhoi', rhoi)
+        # print('rhoe', rhoe)
         # k_approx_i = (Ryi/Rxi)**(2/np.pi)
         # k_approx_e = (Rye/Rxe)**(2/np.pi)
         k_approx_i = 1.18*(rhoi)**(0.598) - 0.19
@@ -248,19 +248,12 @@ class Bearing():
         """Computation of Kn, the ball stiffness
 
         Returns:
-            float: Ball stiffness
+            float: Ball stiffness [N / m^(3/2)]
         """
-        gamma = self.gamma
-        Rxi = self.Rx_i
-        Ryi = self.Ry_i
-        Rxe = self.Rx_e
-        Rye = self.Ry_e
-        GAMMAi = self.GAMMA_i
-        GAMMAe = self.GAMMA_e
         # print('GAMMAi', GAMMAi)
         # print('GAMMAe', GAMMAe)
-        k_res_i = self.k_approx()[0]#self.solve_k(GAMMAi)
-        k_res_e = self.k_approx()[1]#self.solve_k(GAMMAe)
+        k_res_i = self.solve_k(self.GAMMA_i)
+        k_res_e = self.solve_k(self.GAMMA_e)
         # print('Exact ki', k_res_i)
         # print('Exact ke', k_res_e)
         Ke = np.pi/3 * k_res_e * self.equiv_E(self.ball, self.outer) * np.sqrt(2*self.S(k_res_e) * self.R_e / self.F(k_res_e)**3)
@@ -282,6 +275,31 @@ class Bearing():
         """
         return 2/( (1-part1.Mat.Nu**2)/part1.Mat.E + (1-part2.Mat.Nu**2)/part2.Mat.E)
 
+    def psi_range(self):
+        psi_range=np.linspace(0, 2*np.pi, self.Z, False)
+        return np.insert(psi_range[:len(psi_range)//2+1], 0,psi_range[len(psi_range)//2+1:]-2*np.pi)
+    
+    def func(self, x, Fa, Fr, M, psi_range):
+            deltaAbar, deltaRbar, thetabar = x[0], x[1], x[2]
+            eq1=Fa
+            eq2=Fr
+            eq3=M     
+            for psi in psi_range:
+                # if psi >=0 and psi<=np.pi:
+                    print('Angle', np.round(np.degrees(psi),2), '°')                
+                    denom = np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2)
+                    print('denom', denom)
+                    # print(deltaAbar, self.Ri * thetabar * np.abs(np.cos(psi)), deltaRbar*np.abs(np.cos(psi)))
+                    num1 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
+                    num2 = (denom-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.abs(np.cos(psi)))*np.cos(psi)
+                    num3 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
+                    # print(- self.Kn*self.A**1.5 * num1/denom, - self.Kn*self.A**1.5 * num2/denom, - self.dm/2 * self.Kn*self.A**1.5 * num3/denom )
+                    eq1 += - self.Kn*self.A**1.5 * num1/denom
+                    eq2 += - self.Kn*self.A**1.5 * num2/denom
+                    eq3 += - self.dm/2 * self.Kn*self.A**1.5 * num3/denom
+            print([eq1, eq2, eq3])
+            return [eq1, eq2, eq3]
+    
     def solve_disp(self, Fa, Fr, M):
         """Compute the displacement of inner ring
 
@@ -290,33 +308,10 @@ class Bearing():
             Fr (float): Radial force applied on the inner ring [N]
             M (float): Moment applied on the inner ring [Nm]
         """
-        psi_range = np.linspace(-np.pi, np.pi, self.Z, False)
-        # print('psi range', psi_range,'rad')
-        # print(psi_range*180/np.pi, '°')
-
-        def func(x):
-            deltaAbar, deltaRbar, thetabar = x[0], x[1], x[2]
-            eq1=Fa
-            eq2=Fr
-            eq3=M            
-            for psi in psi_range:
-                # print(psi)
-                denom = np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2)
-                
-                num1 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
-                num2 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.cos(psi))*np.cos(psi)
-                num3 = (np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2)-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
-                
-                eq1 += - self.Kn*self.A**1.5 * num1/denom
-                eq2 += - self.Kn*self.A**1.5 * num2/denom
-                eq3 += - self.dm/2 * self.Kn*self.A**1.5 * num3/denom 
-            
-            return [eq1, eq2, eq3]
-        
-        x0=[0, 0 , 0]
-        res, infodict, ier, mesg = fsolve(func, x0, full_output=True)
-        print('f(xo)', func(x0))
-        print('f(res)', func(res))
+        psi_range = self.psi_range()
+        x0=[1e-6, 1e-6, 1e-6]
+        res, infodict, ier, mesg = fsolve(self.func, x0, args=(Fa, Fr, M, psi_range,), full_output=True)
+        print('f(res)', self.func(res, Fa, Fr, M, psi_range))
         print('result', res)
         print(mesg)
         return res[0], res[1], res[2]
@@ -392,7 +387,7 @@ class Bearing():
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         disp = self.solve_disp(Fa, Fr, M)
         Q=[]
-        psi=list(np.linspace(-np.pi, np.pi, self.Z, False))
+        psi=list(self.psi_range())
         for angle in psi:
             Q.append(self.Q(disp[0], disp[1], disp[2], angle))
         psi.append(psi[0])
@@ -438,21 +433,14 @@ class Bearing():
         ax2.add_patch(Rectangle((self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
         ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
         ax2.add_patch(Rectangle((arc_cord(self.inner)/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
-
-        # print('radius', self.inner.r, 'diameter', 2 *self.inner.r)
-        # print('angle', arc_opening_angle(self.inner)/2)
-        # print('arc_coord', arc_cord(self.inner))
-        # print('sagittas', sagittas(self.inner))
-        # print('theta1', (3/2*180 - arc_opening_angle(self.inner)/2))
-        # print('theta2', 1/2 * (180-arc_opening_angle(self.inner)/2))
         ax2.add_patch(Arc((0, self.Ri), 2*self.inner.r, 2*self.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(self.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(self.inner)), linewidth=2))
-        ax2.plot(0, self.Ri, marker='+')        
+        ax2.plot(0, self.Ri, marker='+', c='b')        
         
         # Outer ring drawing
         ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d/2 ), self.outer.b, lw, color='r'))
         
         ax2.add_patch(Arc((0, self.Ro), self.ball.D, self.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
-        ax2.plot(0, self.Ro, marker='+')
+        ax2.plot(0, self.Ro, marker='+', c='r')
 
         ax2.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
                               Line2D([0], [0], color='b', lw=2, label='Inner ring'),

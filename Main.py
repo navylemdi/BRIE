@@ -11,22 +11,16 @@ ball = Ball(Ceramic, 6.35/1000)
 inner_raceway = Raceway(AMS5898, 'Inner', 3.397/1000, 20/1000, 12/1000, 27.959/1000)
 outer_raceway = Raceway(AMS5898, 'Outer', 3.429/1000, 42/1000, 12/1000, 34.969/1000)
 bearing = Bearing(outer_raceway, inner_raceway, ball, 14, 15, 30.994/1000, 0.4818/1000)
-Fa=1000
-Fr=1000
-M=0
+Fa=0
+Fr=0
+M=10
 disp = bearing.solve_disp(Fa, Fr, M)
 # disp_mm = bearing.variable_bar_2_variable(disp)
 # print(bearing.list_variable_bar_2_variable(disp))
 Qmax = bearing.Q_max(disp[0], disp[1], disp[2])
-a_i= bearing.a(Qmax, inner_raceway)
-a_e= bearing.a(Qmax, outer_raceway)
-b_i= bearing.b(a_i, inner_raceway)
-b_e= bearing.b(a_e, outer_raceway)
 # bearing.Display()
 bearing.Display_ball_load(Fa, Fr, M)
 print(Qmax, 'N')
-print(a_i, b_i)
-print(a_e, b_e)
 alpha0=[]
 alpha=[]
 alpha2=[]
