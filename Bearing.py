@@ -10,7 +10,7 @@ from matplotlib.patches import Circle, Rectangle, Arc
 class Bearing():
     """Bearing object class
     """
-    def __init__(self, outer : Raceway, inner: Raceway, ball:Ball, Z:int, alpha0:float, dm: float, A:float):
+    def __init__(self, outer : Raceway, inner: Raceway, ball:Ball, Z:int, alpha0:float):
         """Initialization of the Bearing object
 
         Args:
@@ -28,12 +28,14 @@ class Bearing():
         self.ball = ball
         self.Z = Z
         self.alpha0=np.radians(alpha0)
-        self.dm=dm
+        self.dm=self.dm()
         self.fi=self.conformity(self.inner)
         self.fo=self.conformity(self.outer)
         # print('RBx', (self.dm-self.ball.D*np.cos(alpha0))/(2*np.cos(self.alpha0)))
         self.B = self.fi+self.fo-1
-        self.A=A
+        self.A = self.B * self.ball.D
+        self.Pd = self.Pd()
+        self.Pe = self.Pe()
         self.gamma = self.gamma()
         # print('gamma', self.gamma)
         self.Rx_i = self.Rx(self.inner)
@@ -48,7 +50,7 @@ class Bearing():
         self.R_e = 1/self.inverse_R(self.Rx_e, self.Ry_e)
         self.GAMMA_i = self.GAMMA(self.Rx_i, self.Ry_i)
         self.GAMMA_e = self.GAMMA(self.Rx_e, self.Ry_e)
-
+        self.psi_array = self.psi_range()
         self.Kn = self.Kn()
         self.Ri = self.Ri()
         self.Ro = self.Ro()
@@ -64,10 +66,30 @@ class Bearing():
         """
         return ring.r/self.ball.D
     
+    def dm(self):
+        return np.mean([self.outer.d, self.inner.d])
+    
+    def Pd(self):
+        return self.outer.d - self.inner.d - 2*self.ball.D
+        # return 2*self.B*self.ball.D * (1-np.cos(self.alpha0))
+    
+    def Pe(self):
+        return 2*self.ball.D*np.sin(self.alpha0)
+    
     def Ri(self):
+        """Generate Radius of locus of inner raceway groove curvature center
+
+        Returns:
+            float: Radius of locus of raceway groove curvature centers
+        """
         return self.dm/2 + (self.inner.r - self.ball.D/2) * np.cos(self.alpha0)
     
     def Ro(self):
+        """Generate Radius of locus of outer raceway groove curvature center
+
+        Returns:
+            float: Radius of locus of raceway groove curvature centers
+        """
         return self.Ri - self.A*np.cos(self.alpha0)
     
     def s(self, psi, deltaA, deltaR, theta):
@@ -280,24 +302,27 @@ class Bearing():
         return np.insert(psi_range[:len(psi_range)//2+1], 0,psi_range[len(psi_range)//2+1:]-2*np.pi)
     
     def func(self, x, Fa, Fr, M, psi_range):
+            # print('----------------------------------')
+            # print('New call of func')
             deltaAbar, deltaRbar, thetabar = x[0], x[1], x[2]
             eq1=Fa
             eq2=Fr
-            eq3=M     
+            eq3=M
+            # print(u'\u03B4a', deltaAbar, u'\u03B4r', deltaRbar, u'\u03B8', thetabar)
             for psi in psi_range:
-                # if psi >=0 and psi<=np.pi:
-                    print('Angle', np.round(np.degrees(psi),2), '°')                
+                # if psi >=0:
+                    # print('Angle', np.round(np.degrees(psi),2), '°')                
                     denom = np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2)
-                    print('denom', denom)
-                    # print(deltaAbar, self.Ri * thetabar * np.abs(np.cos(psi)), deltaRbar*np.abs(np.cos(psi)))
+                    # print('denom', denom)
+                    # print((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi)), (np.cos(self.alpha0) + deltaRbar*np.cos(psi)))
                     num1 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
-                    num2 = (denom-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.abs(np.cos(psi)))*np.cos(psi)
+                    num2 = (denom-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.cos(psi))*np.cos(psi)
                     num3 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
                     # print(- self.Kn*self.A**1.5 * num1/denom, - self.Kn*self.A**1.5 * num2/denom, - self.dm/2 * self.Kn*self.A**1.5 * num3/denom )
                     eq1 += - self.Kn*self.A**1.5 * num1/denom
                     eq2 += - self.Kn*self.A**1.5 * num2/denom
                     eq3 += - self.dm/2 * self.Kn*self.A**1.5 * num3/denom
-            print([eq1, eq2, eq3])
+            # print([eq1, eq2, eq3])
             return [eq1, eq2, eq3]
     
     def solve_disp(self, Fa, Fr, M):
@@ -309,11 +334,12 @@ class Bearing():
             M (float): Moment applied on the inner ring [Nm]
         """
         psi_range = self.psi_range()
-        x0=[1e-6, 1e-6, 1e-6]
-        res, infodict, ier, mesg = fsolve(self.func, x0, args=(Fa, Fr, M, psi_range,), full_output=True)
+        x0=[(Fa/self.Kn)**(1/1.5)/self.A, (Fr/self.Kn)**(1/1.5)/self.A, 1]
+        res, infodict, ier, mesg = fsolve(self.func, x0, args=(Fa, Fr, M, psi_range,), full_output=True, xtol=1e-3)
         print('f(res)', self.func(res, Fa, Fr, M, psi_range))
         print('result', res)
         print(mesg)
+        print(infodict)
         return res[0], res[1], res[2]
     
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
@@ -370,7 +396,7 @@ class Bearing():
     def Q(self, DeltaAbar, DeltaRbar, Thetabar, psi):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + DeltaAbar + self.Ri*Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar*np.cos(psi))**2)**0.5 -1)**1.5
     
-    def Pmax(self, Q, a, b):
+    def P(self, Q, a, b):
         #Verified
         return 3*Q/(2*np.pi*a*b)
     
@@ -383,6 +409,12 @@ class Bearing():
     def alpha3(self, DeltaAbar, DeltaRbar, Thetabar, psi):
         return (np.sin(self.alpha0) + DeltaAbar + self.Ri * Thetabar*np.cos(psi)) / (np.cos(self.alpha0) + DeltaRbar * np.cos(psi))
 
+    def A1(self, DeltaA, Theta, psi):
+        return self.B*self.ball.D * np.sin(self.alpha0) + DeltaA + Theta*self.Ri*np.cos(psi)
+    
+    def A2(self, DeltaR, psi):
+        return self.B*self.ball.D * np.cos(self.alpha0) + DeltaR * np.cos(psi)
+
     def Display_ball_load(self, Fa, Fr, M):
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         disp = self.solve_disp(Fa, Fr, M)
@@ -393,6 +425,30 @@ class Bearing():
         psi.append(psi[0])
         Q.append(Q[0])
         ax.plot(psi, Q)
+    
+    def Display_ball_pressure(self, Fa, Fr, M):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        disp = self.solve_disp(Fa, Fr, M)
+        kappa_i = self.solve_k(self.GAMMA_i)
+        kappa_e = self.solve_k(self.GAMMA_e)
+        P_i=[]
+        P_e=[]
+        psi=list(self.psi_range())
+        for angle in psi:
+            Q = self.Q(disp[0], disp[1], disp[2], angle)
+            a_i = self.a(Q, kappa_i, self.inner)
+            b_i = self.a(Q, kappa_i, self.inner)
+            P_i.append(self.P(Q,a_i,b_i)*1e-6)
+            a_e = self.a(Q, kappa_e, self.outer)
+            b_e = self.a(Q, kappa_e, self.outer)
+            P_e.append(self.P(Q,a_e,b_e)*1e-6)
+        psi.append(psi[0])
+        P_i.append(P_i[0])
+        P_e.append(P_e[0])
+        ax.plot(psi, P_i, color='r', label='Inner race')
+        ax.plot(psi, P_e, color='b', label='Outer race')
+        plt.title('Pressure [MPa]')
+        plt.legend()
 
     def Display(self):
         def sagittas(part):
@@ -412,10 +468,10 @@ class Bearing():
             ax1.add_patch(c)
         
         # Inner ring drawing
-        ax1.add_patch(Circle((0,0), self.inner.d/2, ec='b', fc='w'))
+        ax1.add_patch(Circle((0,0), self.inner.d_fit/2, ec='b', fc='w'))
 
         # Outer ring drawing
-        ax1.add_patch(Circle((0,0), self.outer.d/2, ec='r', fill = False))
+        ax1.add_patch(Circle((0,0), self.outer.d_fit/2, ec='r', fill = False))
         ax1.axis('equal')
         ax1.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
                               Line2D([0], [0], color='b', lw=2, label='Inner ring'),
@@ -437,7 +493,7 @@ class Bearing():
         ax2.plot(0, self.Ri, marker='+', c='b')        
         
         # Outer ring drawing
-        ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d/2 ), self.outer.b, lw, color='r'))
+        ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d_fit/2 ), self.outer.b, lw, color='r'))
         
         ax2.add_patch(Arc((0, self.Ro), self.ball.D, self.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
         ax2.plot(0, self.Ro, marker='+', c='r')
