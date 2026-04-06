@@ -1,0 +1,112 @@
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Rectangle, Arc
+from Bearing import Bearing
+from Load import BearingLoads
+import numpy as np
+
+class Display():
+    def __init__(self):
+        pass
+    
+    def Display_ball_load(bearing: Bearing, Displacements):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        Q=[]
+        psi=list(bearing.psi_range())
+        for angle in psi:
+            Q.append(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle))
+        psi.append(psi[0])
+        Q.append(Q[0])
+        ax.plot(psi, Q)
+        ax.set_xticks(np.linspace(0, 2*np.pi, bearing.Z, endpoint=False)[:bearing.Z])
+        plt.title('Force on ball [N]')
+    
+    def Display_ball_angle(bearing: Bearing, Displacements):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        A=[]
+        psi=list(bearing.psi_range())
+        for angle in psi:
+            A.append(np.degrees(np.arcsin(bearing.alpha(Displacements[0], Displacements[1], Displacements[2], angle))))
+        psi.append(psi[0])
+        A.append(A[0])
+        ax.plot(psi, A)
+        ax.set_xticks(np.linspace(0, 2*np.pi, bearing.Z, endpoint=False)[:bearing.Z])
+        plt.title('Contact angle on ball [°]')
+    
+    
+    def Display_ball_pressure(bearing: Bearing, Displacements):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        kappa_i = bearing.solve_k(bearing.GAMMA_i)
+        kappa_e = bearing.solve_k(bearing.GAMMA_e)
+        P_i=[]
+        P_e=[]
+        psi=list(bearing.psi_range())
+        for angle in psi:
+            Q = bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)
+            a_i = bearing.a(Q, kappa_i, bearing.inner)
+            b_i = bearing.a(Q, kappa_i, bearing.inner)
+            P_i.append(bearing.P(Q,a_i,b_i)*1e-6)
+            a_e = bearing.a(Q, kappa_e, bearing.outer)
+            b_e = bearing.a(Q, kappa_e, bearing.outer)
+            P_e.append(bearing.P(Q,a_e,b_e)*1e-6)
+        psi.append(psi[0])
+        P_i.append(P_i[0])
+        P_e.append(P_e[0])
+        ax.plot(psi, P_i, color='r', label='Inner race')
+        ax.plot(psi, P_e, color='b', label='Outer race')
+        ax.set_xticks(np.linspace(0, 2*np.pi, bearing.Z, endpoint=False)[:bearing.Z])
+        plt.title('Contact pressure on ball[MPa]')
+        plt.legend()
+
+    def Display(bearing: Bearing):
+        def sagittas(part):
+            return part.r + part.ds/2 - bearing.Ri
+    
+        def arc_cord(part):
+            return 2*np.sqrt( part.r**2 - (-part.r + sagittas(part))**2 )
+    
+        def arc_opening_angle(part):
+            return np.degrees( 2*np.arcsin(arc_cord(part)/(2*part.r)) )
+        
+        fig = plt.figure()
+        ax1 = plt.subplot(2,1,1)
+        # Ball Drawing
+        for i in range(0, bearing.Z):
+            c=Circle((bearing.dm/2 * np.cos(i*2*np.pi/bearing.Z), bearing.dm/2 * np.sin(i*2*np.pi/bearing.Z)), bearing.ball.D/2, color='k')
+            ax1.add_patch(c)
+        
+        # Inner ring drawing
+        ax1.add_patch(Circle((0,0), bearing.inner.d_fit/2, ec='b', fc='w'))
+
+        # Outer ring drawing
+        ax1.add_patch(Circle((0,0), bearing.outer.d_fit/2, ec='r', fill = False))
+        ax1.axis('equal')
+        ax1.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
+                              Line2D([0], [0], color='b', lw=2, label='Inner ring'),
+                              Line2D([0], [0], color='r', lw=2, label='Outer ring')])
+        
+        ax2 = plt.subplot(2,1,2)
+        lw=0.00001
+        # Ball Drawing
+        c=Circle((0, bearing.dm/2), bearing.ball.D/2, color='k')
+        ax2.add_patch(c)
+
+        # Inner ring drawing
+        ax2.add_patch(Rectangle((-bearing.inner.b/2, bearing.inner.d_fit/2 ), bearing.inner.b, lw, color='b'))
+        ax2.add_patch(Rectangle((-bearing.inner.b/2, bearing.inner.d_fit/2 ), lw, bearing.inner.ds/2 - bearing.inner.d_fit/2, color='b'))
+        ax2.add_patch(Rectangle((bearing.inner.b/2, bearing.inner.d_fit/2 ), lw, bearing.inner.ds/2 - bearing.inner.d_fit/2, color='b'))
+        ax2.add_patch(Rectangle((-bearing.inner.b/2, bearing.inner.ds/2 ), bearing.inner.b/2 - arc_cord(bearing.inner)/2, lw, color='b'))
+        ax2.add_patch(Rectangle((arc_cord(bearing.inner)/2, bearing.inner.ds/2 ), bearing.inner.b/2 - arc_cord(bearing.inner)/2, lw, color='b'))
+        ax2.add_patch(Arc((0, bearing.Ri), 2*bearing.inner.r, 2*bearing.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(bearing.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(bearing.inner)), linewidth=2))
+        ax2.plot(0, bearing.Ri, marker='+', c='b')        
+        
+        # Outer ring drawing
+        ax2.add_patch(Rectangle((-bearing.outer.b/2, bearing.outer.d_fit/2 ), bearing.outer.b, lw, color='r'))
+        
+        ax2.add_patch(Arc((0, bearing.Ro), bearing.ball.D, bearing.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
+        ax2.plot(0, bearing.Ro, marker='+', c='r')
+
+        ax2.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
+                              Line2D([0], [0], color='b', lw=2, label='Inner ring'),
+                              Line2D([0], [0], color='r', lw=2, label='Outer ring')])
+        ax2.axis('equal')
