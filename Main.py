@@ -5,33 +5,38 @@ from Bearing import Bearing
 import numpy as np
 import matplotlib.pyplot as plt
 
-Ceramic = Material('Ceramic')
-AMS5898 = Material('AMS5898')
-ball = Ball(Ceramic, 6.35/1000)
-inner_raceway = Raceway(AMS5898, 'Inner', 3.397/1000, 20/1000, 12/1000, 27.959/1000)
-outer_raceway = Raceway(AMS5898, 'Outer', 3.429/1000, 42/1000, 12/1000, 34.969/1000)
-bearing = Bearing(outer_raceway, inner_raceway, ball, 14, 15, 30.994/1000, 0.4818/1000)
+Ceramic = Material('Steel')
+AMS5898 = Material('Steel')
+ball = Ball(Ceramic, 12.7/1000)
+inner_raceway = Raceway(AMS5898, 'Inner', 6.604/1000, 52.291/1000, 20/1000, b=20/1000, ds=60/1000)
+outer_raceway = Raceway(AMS5898, 'Outer', 6.604/1000, 77.706/1000, 70/1000, b=20/1000, ds=70/1000)
+bearing = Bearing(outer_raceway, inner_raceway, ball, Z=9, alpha0=0)
+print('A:', bearing.A*1000,'mm')
+print('Pd:', bearing.Pd*1000_000,'µm')
+print('Pe:',bearing.Pe*1000,'mm')
 Fa=0
 Fr=0
 M=10
 disp = bearing.solve_disp(Fa, Fr, M)
 # disp_mm = bearing.variable_bar_2_variable(disp)
-# print(bearing.list_variable_bar_2_variable(disp))
-Qmax = bearing.Q_max(disp[0], disp[1], disp[2])
+print('disp [mm]', bearing.list_variable_bar_2_variable(disp))
+# Qmax = bearing.Q_max(disp[0], disp[1], disp[2])
 # bearing.Display()
 bearing.Display_ball_load(Fa, Fr, M)
-print(Qmax, 'N')
-alpha0=[]
-alpha=[]
-alpha2=[]
-alpha3=[]
-psi=np.linspace(-np.pi, np.pi, bearing.Z , False)
+bearing.Display_ball_pressure(Fa, Fr, M)
+plt.show()
+# print(Qmax, 'N')
+# alpha0=[]
+# alpha=[]
+# alpha2=[]
+# alpha3=[]
+# psi=np.linspace(-np.pi, np.pi, bearing.Z , False)
 
-for angle in psi:
-    alpha0.append(bearing.alpha0)
-    alpha.append(np.arcsin((bearing.alpha(disp[0], disp[1], disp[2], angle))))
-    alpha2.append(np.arccos(bearing.alpha2(disp[0], disp[1], disp[2], angle)))
-    alpha3.append(np.arctan(bearing.alpha3(disp[0], disp[1], disp[2], angle)))
+# for angle in psi:
+#     alpha0.append(bearing.alpha0)
+#     alpha.append(np.arcsin((bearing.alpha(disp[0], disp[1], disp[2], angle))))
+#     alpha2.append(np.arccos(bearing.alpha2(disp[0], disp[1], disp[2], angle)))
+#     alpha3.append(np.arctan(bearing.alpha3(disp[0], disp[1], disp[2], angle)))
 # print(np.degrees(alpha))
 # print(np.degrees(alpha2))
 # print(np.degrees(alpha3))
@@ -41,12 +46,12 @@ for angle in psi:
 #     sum.append(alpha[i]**2 + alpha2[i]**2)
 # print(sum)
 
-fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
-ax.plot(psi, np.degrees(alpha0), c='k')
-ax.plot(psi, np.degrees(alpha), c='b')
-ax.plot(psi, np.degrees(alpha2), c='r')
-ax.plot(psi, np.degrees(alpha3), c='g')
-plt.show()
+# fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+# ax.plot(psi, np.degrees(alpha0), c='k')
+# ax.plot(psi, np.degrees(alpha), c='b')
+# ax.plot(psi, np.degrees(alpha2), c='r')
+# ax.plot(psi, np.degrees(alpha3), c='g')
+# plt.show()
 
 # print('Ri:',bearing.Ri)
 # print('Ro:',bearing.Ro)
