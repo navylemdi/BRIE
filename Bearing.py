@@ -1,11 +1,8 @@
 import numpy as np
 from Ball import Ball 
 from Raceway import Raceway
-from scipy.optimize import fsolve, root_scalar
+from scipy.optimize import fsolve
 from scipy import integrate
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.patches import Circle, Rectangle, Arc
 
 class Bearing():
     """Bearing object class
@@ -300,48 +297,7 @@ class Bearing():
     def psi_range(self):
         psi_range=np.linspace(0, 2*np.pi, self.Z, False)
         return np.insert(psi_range[:len(psi_range)//2+1], 0,psi_range[len(psi_range)//2+1:]-2*np.pi)
-    
-    def func(self, x, Fa, Fr, M, psi_range):
-            # print('----------------------------------')
-            # print('New call of func')
-            deltaAbar, deltaRbar, thetabar = x[0], x[1], x[2]
-            eq1=Fa
-            eq2=Fr
-            eq3=M
-            # print(u'\u03B4a', deltaAbar, u'\u03B4r', deltaRbar, u'\u03B8', thetabar)
-            for psi in psi_range:
-                # if psi >=0:
-                    # print('Angle', np.round(np.degrees(psi),2), '°')                
-                    denom = np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar*np.cos(psi))**2)
-                    # print('denom', denom)
-                    # print((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi)), (np.cos(self.alpha0) + deltaRbar*np.cos(psi)))
-                    num1 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))
-                    num2 = (denom-1)**1.5 * (np.cos(self.alpha0) + deltaRbar*np.cos(psi))*np.cos(psi)
-                    num3 = (denom-1)**1.5 * (np.sin(self.alpha0) + deltaAbar + self.Ri*thetabar*np.cos(psi))*np.cos(psi)
-                    # print(- self.Kn*self.A**1.5 * num1/denom, - self.Kn*self.A**1.5 * num2/denom, - self.dm/2 * self.Kn*self.A**1.5 * num3/denom )
-                    eq1 += - self.Kn*self.A**1.5 * num1/denom
-                    eq2 += - self.Kn*self.A**1.5 * num2/denom
-                    eq3 += - self.dm/2 * self.Kn*self.A**1.5 * num3/denom
-            # print([eq1, eq2, eq3])
-            return [eq1, eq2, eq3]
-    
-    def solve_disp(self, Fa, Fr, M):
-        """Compute the displacement of inner ring
-
-        Args:
-            Fa (float): Axial force applied on the inner ring [N]
-            Fr (float): Radial force applied on the inner ring [N]
-            M (float): Moment applied on the inner ring [Nm]
-        """
-        psi_range = self.psi_range()
-        x0=[(Fa/self.Kn)**(1/1.5)/self.A, (Fr/self.Kn)**(1/1.5)/self.A, 1]
-        res, infodict, ier, mesg = fsolve(self.func, x0, args=(Fa, Fr, M, psi_range,), full_output=True, xtol=1e-3)
-        print('f(res)', self.func(res, Fa, Fr, M, psi_range))
-        print('result', res)
-        print(mesg)
-        print(infodict)
-        return res[0], res[1], res[2]
-    
+        
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
         return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
     
@@ -414,91 +370,3 @@ class Bearing():
     
     def A2(self, DeltaR, psi):
         return self.B*self.ball.D * np.cos(self.alpha0) + DeltaR * np.cos(psi)
-
-    def Display_ball_load(self, Fa, Fr, M):
-        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
-        disp = self.solve_disp(Fa, Fr, M)
-        Q=[]
-        psi=list(self.psi_range())
-        for angle in psi:
-            Q.append(self.Q(disp[0], disp[1], disp[2], angle))
-        psi.append(psi[0])
-        Q.append(Q[0])
-        ax.plot(psi, Q)
-    
-    def Display_ball_pressure(self, Fa, Fr, M):
-        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
-        disp = self.solve_disp(Fa, Fr, M)
-        kappa_i = self.solve_k(self.GAMMA_i)
-        kappa_e = self.solve_k(self.GAMMA_e)
-        P_i=[]
-        P_e=[]
-        psi=list(self.psi_range())
-        for angle in psi:
-            Q = self.Q(disp[0], disp[1], disp[2], angle)
-            a_i = self.a(Q, kappa_i, self.inner)
-            b_i = self.a(Q, kappa_i, self.inner)
-            P_i.append(self.P(Q,a_i,b_i)*1e-6)
-            a_e = self.a(Q, kappa_e, self.outer)
-            b_e = self.a(Q, kappa_e, self.outer)
-            P_e.append(self.P(Q,a_e,b_e)*1e-6)
-        psi.append(psi[0])
-        P_i.append(P_i[0])
-        P_e.append(P_e[0])
-        ax.plot(psi, P_i, color='r', label='Inner race')
-        ax.plot(psi, P_e, color='b', label='Outer race')
-        plt.title('Pressure [MPa]')
-        plt.legend()
-
-    def Display(self):
-        def sagittas(part):
-            return part.r + part.ds/2 - self.Ri
-    
-        def arc_cord(part):
-            return 2*np.sqrt( part.r**2 - (-part.r + sagittas(part))**2 )
-    
-        def arc_opening_angle(part):
-            return np.degrees( 2*np.arcsin(arc_cord(part)/(2*part.r)) )
-        
-        fig = plt.figure()
-        ax1 = plt.subplot(2,1,1)
-        # Ball Drawing
-        for i in range(0, self.Z):
-            c=Circle((self.dm/2 * np.cos(i*2*np.pi/self.Z), self.dm/2 * np.sin(i*2*np.pi/self.Z)), self.ball.D/2, color='k')
-            ax1.add_patch(c)
-        
-        # Inner ring drawing
-        ax1.add_patch(Circle((0,0), self.inner.d_fit/2, ec='b', fc='w'))
-
-        # Outer ring drawing
-        ax1.add_patch(Circle((0,0), self.outer.d_fit/2, ec='r', fill = False))
-        ax1.axis('equal')
-        ax1.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
-                              Line2D([0], [0], color='b', lw=2, label='Inner ring'),
-                              Line2D([0], [0], color='r', lw=2, label='Outer ring')])
-        
-        ax2 = plt.subplot(2,1,2)
-        lw=0.00001
-        # Ball Drawing
-        c=Circle((0, self.dm/2), self.ball.D/2, color='k')
-        ax2.add_patch(c)
-
-        # Inner ring drawing
-        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), self.inner.b, lw, color='b'))
-        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
-        ax2.add_patch(Rectangle((self.inner.b/2, self.inner.d/2 ), lw, self.inner.ds/2 - self.inner.d/2, color='b'))
-        ax2.add_patch(Rectangle((-self.inner.b/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
-        ax2.add_patch(Rectangle((arc_cord(self.inner)/2, self.inner.ds/2 ), self.inner.b/2 - arc_cord(self.inner)/2, lw, color='b'))
-        ax2.add_patch(Arc((0, self.Ri), 2*self.inner.r, 2*self.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(self.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(self.inner)), linewidth=2))
-        ax2.plot(0, self.Ri, marker='+', c='b')        
-        
-        # Outer ring drawing
-        ax2.add_patch(Rectangle((-self.outer.b/2, self.outer.d_fit/2 ), self.outer.b, lw, color='r'))
-        
-        ax2.add_patch(Arc((0, self.Ro), self.ball.D, self.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
-        ax2.plot(0, self.Ro, marker='+', c='r')
-
-        ax2.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
-                              Line2D([0], [0], color='b', lw=2, label='Inner ring'),
-                              Line2D([0], [0], color='r', lw=2, label='Outer ring')])
-        ax2.axis('equal')
