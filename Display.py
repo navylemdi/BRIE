@@ -33,6 +33,22 @@ class Display():
         ax.set_xticks(np.linspace(0, 2*np.pi, bearing.Z, endpoint=False)[:bearing.Z])
         plt.title('Contact angle on ball [°]')
     
+    def Display_contact_deformation(bearing: Bearing, Displacements):
+        fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
+        DeltaI=[]
+        DeltaE=[]
+        psi=list(bearing.psi_range())
+        for angle in psi:
+            DeltaI.append(bearing.deltaI(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)) * 1_000_000)
+            DeltaE.append(bearing.deltaE(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)) * 1_000_000)
+        psi.append(psi[0])
+        DeltaI.append(DeltaI[0])
+        DeltaE.append(DeltaE[0])
+        ax.plot(psi, DeltaI, color='r', label='Inner race')
+        ax.plot(psi, DeltaE, color='b', label='Outer race')
+        ax.set_xticks(np.linspace(0, 2*np.pi, bearing.Z, endpoint=False)[:bearing.Z])
+        plt.title('Contact deformation on ball [µm]')
+        plt.legend()
     
     def Display_ball_pressure(bearing: Bearing, Displacements):
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
