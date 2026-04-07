@@ -11,7 +11,7 @@ class disp_solve():
         self.__A = self.__bearing.A
         self.__alpha0 = self.__bearing.alpha0
         self.__Ri = self.__bearing.Ri
-        self.__Kn = self.__bearing.Kn
+        self.__Kn = self.__bearing.K_n
         self.__dm = self.__bearing.dm
         self.__Fa = loads.Fa
         self.__Fr = loads.Fr
@@ -175,6 +175,7 @@ class disp_solve():
                     compt += 1
                     print('Displacement calculation in progress: ', np.round(compt/(lim*2+1)**3*100,2), '%', end="\r")
                     if solution[3] == 1:
+                        print('', end="\n")
                         return solution[:3]
         print("No solution has been found")
         return None
