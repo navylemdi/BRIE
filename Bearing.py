@@ -48,7 +48,7 @@ class Bearing():
         self.GAMMA_i = self.GAMMA(self.Rx_i, self.Ry_i)
         self.GAMMA_e = self.GAMMA(self.Rx_e, self.Ry_e)
         self.psi_array = self.psi_range()
-        self.Kn = self.Kn()
+        self.K_n, self.Ke, self.Ki = self.Kn()
         self.Ri = self.Ri()
         self.Ro = self.Ro()
 
@@ -111,6 +111,12 @@ class Bearing():
         thetabar=self.variable_bar(theta)
         psi = np.radians(psi)
         return self.A * ( np.sqrt((np.sin(self.alpha0) + deltaAbar + self.Ri * thetabar * np.cos(psi))**2 + (np.cos(self.alpha0) + deltaRbar * np.cos(psi))**2) - 1)
+    
+    def deltaI(self, Q):
+        return (Q/self.Ki)**(1/1.5)
+    
+    def deltaE(self, Q):
+        return (Q/self.Ke)**(1/1.5)
     
     def gamma(self):
         return self.ball.D * np.cos(self.alpha0)/self.dm
@@ -280,7 +286,7 @@ class Bearing():
         # print('Exact Ki', Ki)
         # print('Exact Ke', Ke)
         Kn = (1/(Ki**(2/3)) + 1/(Ke**(2/3)))**(-3/2)
-        return Kn
+        return Kn, Ke, Ki
     
     def equiv_E(self, part1, part2):
         """Equivalent modulus of elasticity
@@ -299,7 +305,7 @@ class Bearing():
         return np.insert(psi_range[:len(psi_range)//2+1], 0,psi_range[len(psi_range)//2+1:]-2*np.pi)
         
     def Q_max(self, deltaAbar, deltaRbar, Thetabar):
-        return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
+        return self.K_n * self.A**1.5 * (((np.sin(self.alpha0) + deltaAbar + self.Ri*Thetabar)**2 + (np.cos(self.alpha0) + deltaRbar)**2)**0.5-1)**1.5
     
     def a(self, Q, kappa, part):
         """Compute ellipse axis
@@ -350,7 +356,7 @@ class Bearing():
         return b
     
     def Q(self, DeltaAbar, DeltaRbar, Thetabar, psi):
-        return self.Kn * self.A**1.5 * (((np.sin(self.alpha0) + DeltaAbar + self.Ri*Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar*np.cos(psi))**2)**0.5 -1)**1.5
+        return self.K_n * self.A**1.5 * (((np.sin(self.alpha0) + DeltaAbar + self.Ri*Thetabar*np.cos(psi))**2 + (np.cos(self.alpha0) + DeltaRbar*np.cos(psi))**2)**0.5 -1)**1.5
     
     def P(self, Q, a, b):
         #Verified
