@@ -3,18 +3,22 @@ import numpy as np
 class BearingLoads:
     """Classe pour représenter les forces et moments appliqués à un roulement."""
 
-    def __init__(self, Fa: float = 0.0, Fr: float = 0.0, M: float = 0.0):
+    def __init__(self, Fa: float = 0.0, Fr: float = 0.0, M: float = 0.0, ni: float = 0.0, no: float = 0.0):
         """
         Initialise les forces et moments appliqués au roulement.
 
         Args:
-            Fa (float): Force axiale [N].
-            Fr (float): Force radiale [N].
-            M (float): Moment [Nm].
+            Fa (float): Force axiale [N]
+            Fr (float): Force radiale [N]
+            M (float): Moment [Nm]
+            ni (float): Inner ring speed [rpm]
+            no (float): Outer ring speed [rpm]
         """
-        self.Fa = Fa  # Force axiale
-        self.Fr = Fr  # Force radiale
-        self.M = M    # Moment
+        self.Fa = Fa          
+        self.Fr = Fr  
+        self.M = M      
+        self.ni = ni 
+        self.no = no
 
     def __repr__(self):
         """Représentation textuelle de l'objet."""
@@ -31,6 +35,16 @@ class BearingLoads:
         self.Fa = Fa
         self.Fr = Fr
         self.M = M
+    
+    def set_speeds(self, ni: float, no: float):
+        """Met à jour les forces et moments.
+
+        Args:
+            ni (float): Inner ring speed [rpm]
+            no (float): Outer ring speed [rpm]
+        """
+        self.ni = ni
+        self.no = no
 
     def get_resultant_force(self) -> float:
         """Calcule la force résultante.
