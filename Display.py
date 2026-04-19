@@ -3,6 +3,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Circle, Rectangle, Arc
 from Bearing import Bearing
 from Load import BearingLoads
+from Displacement_solver import Stiffness
 import numpy as np
 
 class Display():
@@ -12,9 +13,10 @@ class Display():
     def Display_ball_load(bearing: Bearing, Displacements):
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         Q=[]
+        Stiffness_obj = Stiffness(bearing, bearing.alpha0)
         psi=list(bearing.psi_range())
         for angle in psi:
-            Q.append(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle))
+            Q.append(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle, Stiffness_obj.K_n))
         psi.append(psi[0])
         Q.append(Q[0])
         ax.plot(psi, Q)
@@ -37,10 +39,11 @@ class Display():
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
         DeltaI=[]
         DeltaE=[]
+        Stiffness_obj = Stiffness(bearing, bearing.alpha0)
         psi=list(bearing.psi_range())
         for angle in psi:
-            DeltaI.append(bearing.deltaI(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)) * 1_000_000)
-            DeltaE.append(bearing.deltaE(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)) * 1_000_000)
+            DeltaI.append(bearing.delta(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle, Stiffness_obj.K_n), Stiffness_obj.K_i) * 1_000_000)
+            DeltaE.append(bearing.delta(bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle, Stiffness_obj.K_n), Stiffness_obj.K_e) * 1_000_000)
         psi.append(psi[0])
         DeltaI.append(DeltaI[0])
         DeltaE.append(DeltaE[0])
@@ -52,18 +55,19 @@ class Display():
     
     def Display_ball_pressure(bearing: Bearing, Displacements):
         fig, ax = plt.subplots(1, 1, subplot_kw={'projection': 'polar'})
-        kappa_i = bearing.solve_k(bearing.GAMMA_i)
-        kappa_e = bearing.solve_k(bearing.GAMMA_e)
+        Stiffness_obj = Stiffness(bearing, bearing.alpha0)
+        kappa_i = Stiffness_obj._kappa_i
+        kappa_e = Stiffness_obj._kappa_e
         P_i=[]
         P_e=[]
         psi=list(bearing.psi_range())
         for angle in psi:
-            Q = bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle)
+            Q = bearing.Q(Displacements[0], Displacements[1], Displacements[2], angle, Stiffness_obj.K_n)
             a_i = bearing.a(Q, kappa_i, bearing.inner)
-            b_i = bearing.a(Q, kappa_i, bearing.inner)
+            b_i = bearing.b(Q, kappa_i, bearing.inner)
             P_i.append(bearing.P(Q,a_i,b_i)*1e-6)
             a_e = bearing.a(Q, kappa_e, bearing.outer)
-            b_e = bearing.a(Q, kappa_e, bearing.outer)
+            b_e = bearing.b(Q, kappa_e, bearing.outer)
             P_e.append(bearing.P(Q,a_e,b_e)*1e-6)
         psi.append(psi[0])
         P_i.append(P_i[0])
