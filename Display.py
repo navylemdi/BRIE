@@ -80,7 +80,7 @@ class Display():
 
     def Display(bearing: Bearing):
         def sagittas(part):
-            return part.r + part.ds/2 - bearing.Ri
+            return part.r + part.ds/2 - bearing._Ri
     
         def arc_cord(part):
             return 2*np.sqrt( part.r**2 - (-part.r + sagittas(part))**2 )
@@ -92,7 +92,7 @@ class Display():
         ax1 = plt.subplot(2,1,1)
         # Ball Drawing
         for i in range(0, bearing.Z):
-            c=Circle((bearing.dm/2 * np.cos(i*2*np.pi/bearing.Z), bearing.dm/2 * np.sin(i*2*np.pi/bearing.Z)), bearing.ball.D/2, color='k')
+            c=Circle((bearing._dm/2 * np.cos(i*2*np.pi/bearing.Z), bearing._dm/2 * np.sin(i*2*np.pi/bearing.Z)), bearing.ball.D/2, color='k')
             ax1.add_patch(c)
         
         # Inner ring drawing
@@ -108,7 +108,7 @@ class Display():
         ax2 = plt.subplot(2,1,2)
         lw=0.00001
         # Ball Drawing
-        c=Circle((0, bearing.dm/2), bearing.ball.D/2, color='k')
+        c=Circle((0, bearing._dm/2), bearing.ball.D/2, color='k')
         ax2.add_patch(c)
 
         # Inner ring drawing
@@ -117,14 +117,14 @@ class Display():
         ax2.add_patch(Rectangle((bearing.inner.b/2, bearing.inner.d_fit/2 ), lw, bearing.inner.ds/2 - bearing.inner.d_fit/2, color='b'))
         ax2.add_patch(Rectangle((-bearing.inner.b/2, bearing.inner.ds/2 ), bearing.inner.b/2 - arc_cord(bearing.inner)/2, lw, color='b'))
         ax2.add_patch(Rectangle((arc_cord(bearing.inner)/2, bearing.inner.ds/2 ), bearing.inner.b/2 - arc_cord(bearing.inner)/2, lw, color='b'))
-        ax2.add_patch(Arc((0, bearing.Ri), 2*bearing.inner.r, 2*bearing.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(bearing.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(bearing.inner)), linewidth=2))
-        ax2.plot(0, bearing.Ri, marker='+', c='b')        
+        ax2.add_patch(Arc((0, bearing._Ri), 2*bearing.inner.r, 2*bearing.inner.r, color='b', theta1=(3/2*180 - arc_opening_angle(bearing.inner)/2), theta2=1/2 * (3*180+arc_opening_angle(bearing.inner)), linewidth=2))
+        ax2.plot(0, bearing._Ri, marker='+', c='b')        
         
         # Outer ring drawing
         ax2.add_patch(Rectangle((-bearing.outer.b/2, bearing.outer.d_fit/2 ), bearing.outer.b, lw, color='r'))
         
-        ax2.add_patch(Arc((0, bearing.Ro), bearing.ball.D, bearing.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
-        ax2.plot(0, bearing.Ro, marker='+', c='r')
+        ax2.add_patch(Arc((0, bearing._Ro), bearing.ball.D, bearing.ball.D, color='r', theta1=90, theta2=180, linewidth=lw*1000))
+        ax2.plot(0, bearing._Ro, marker='+', c='r')
 
         ax2.legend(handles = [Line2D([0], [0], marker ='o', color='w', markerfacecolor='k', markersize=15, label='Ball'),
                               Line2D([0], [0], color='b', lw=2, label='Inner ring'),

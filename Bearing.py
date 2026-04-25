@@ -23,19 +23,19 @@ class Bearing():
         self.inner = inner
         self.ball = ball
         self.Z = Z
-        self.dm=self.dm()
+        self._dm=self.dm()
         self.fi=self.conformity(self.inner)
         self.fo=self.conformity(self.outer)
         # print('RBx', (self.dm-self.ball.D*np.cos(alpha0))/(2*np.cos(self.alpha0)))
         self.B = self.fi+self.fo-1
         self.A = self.B * self.ball.D
-        self.Pd = self.Pd()
+        self._Pd = self.Pd()
         self.alpha0 = self.alpha0_calc()
-        self.Pe = self.Pe()
+        self._Pe = self.Pe()
         
         self.psi_array = self.psi_range()
-        self.Ri = self.Ri()
-        self.Ro = self.Ro()
+        self._Ri = self.Ri()
+        self._Ro = self.Ro()
 
     def conformity(self, ring: Raceway):
         """Bearing conformity computation
@@ -52,13 +52,15 @@ class Bearing():
         return np.mean([self.outer.d, self.inner.d])
     
     def alpha0_calc(self):
-        return np.arccos(1-self.Pd/(2*self.A))
+        "Verified"
+        return np.arccos(1-self._Pd/(2*self.A))
     
     def Pd(self):
         return self.outer.d - self.inner.d - 2*self.ball.D
         # return 2*self.B*self.ball.D * (1-np.cos(self.alpha0))
     
     def Pe(self):
+        "Verified"
         return 2*self.A*np.sin(self.alpha0)
     
     def Ri(self):
@@ -67,7 +69,7 @@ class Bearing():
         Returns:
             float: Radius of locus of raceway groove curvature centers
         """
-        return self.dm/2 + (self.inner.r - self.ball.D/2) * np.cos(self.alpha0)
+        return self._dm/2 + (self.inner.r - self.ball.D/2) * np.cos(self.alpha0)
     
     def Ro(self):
         """Generate Radius of locus of outer raceway groove curvature center
@@ -75,7 +77,7 @@ class Bearing():
         Returns:
             float: Radius of locus of raceway groove curvature centers
         """
-        return self.Ri - self.A*np.cos(self.alpha0)
+        return self._Ri - self.A*np.cos(self.alpha0)
     
     def s(self, psi, deltaA, deltaR, theta):
         return np.sqrt((self.A*np.sin(self.alpha0 + deltaA + self.Ri * theta * np.cos(psi)))**2 + (self.A * np.cos(self.alpha0) + deltaR * np.cos(psi))**2)
