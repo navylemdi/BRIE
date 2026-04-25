@@ -21,10 +21,10 @@ class Stiffness():
         self._kappa_e = self.solve_kappa(self._GAMMA_e)
         self.K_i = self.K(self._kappa_i, self._R_i)
         self.K_e = self.K(self._kappa_e, self._R_e)
-        self.K_n = self.Kn(self._kappa_i, self._kappa_e, self.alpha)[0]
+        self.K_n = self.Kn()
 
     def gamma(self, alpha):
-        return self.bearing.ball.D * np.cos(alpha)/self.bearing.dm
+        return self.bearing.ball.D * np.cos(alpha)/self.bearing._dm
     
     def Rx(self, part, alpha):
         #Verified
@@ -136,7 +136,7 @@ class Stiffness():
     def K(self, kappa, R):
         return np.pi/3 * kappa * self.equiv_E(self.bearing.ball, self.bearing.outer) * np.sqrt(2*self.S(kappa) * R / self.F(kappa)**3)
 
-    def Kn(self, kappa_i, kappa_e, alpha):
+    def Kn(self):
         """Computation of Kn, the ball stiffness
 
         Returns:
@@ -144,12 +144,10 @@ class Stiffness():
         """
         # print('GAMMAi', GAMMAi)
         # print('GAMMAe', GAMMAe)
-        Ke = self.K(kappa_i, self._R_e)
-        Ki = self.K(kappa_e, self._R_i)
         # print('Exact Ki', Ki)
         # print('Exact Ke', Ke)
-        Kn = (1/(Ki**(2/3)) + 1/(Ke**(2/3)))**(-3/2)
-        return Kn, Ke, Ki
+        Kn = (1/(self.K_i**(2/3)) + 1/(self.K_i**(2/3)))**(-3/2)
+        return Kn
 
 class disp_solve_static():
     def __init__(self, bearing: Bearing, loads : BearingLoads):
@@ -158,10 +156,10 @@ class disp_solve_static():
         self.__Z = self.__bearing.Z
         self.__A = self.__bearing.A
         self.__alpha0 = self.__bearing.alpha0
-        self.__Ri = self.__bearing.Ri
+        self.__Ri = self.__bearing._Ri
         self._Stiffness = Stiffness(self.__bearing, self.__alpha0)
         self.__Kn = self._Stiffness.K_n
-        self.__dm = self.__bearing.dm
+        self.__dm = self.__bearing._dm
         self.__Fa = loads.Fa
         self.__Fr = loads.Fr
         self.__M = loads.M
